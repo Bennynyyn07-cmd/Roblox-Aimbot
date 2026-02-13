@@ -1,0 +1,71 @@
+-- FOV Display (Visual Only)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local fovRadius = 150
+local enabled = false
+
+-- GUI erstellen
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "FOV_Display"
+
+-- Toggle Button (Mobile Support)
+local Toggle = Instance.new("TextButton", ScreenGui)
+Toggle.Size = UDim2.new(0,120,0,40)
+Toggle.Position = UDim2.new(0,20,1,-60)
+Toggle.Text = "FOV: OFF"
+Toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
+Toggle.TextColor3 = Color3.new(1,1,1)
+
+-- FOV Kreis
+local Circle = Drawing.new("Circle")
+Circle.Visible = false
+Circle.Radius = fovRadius
+Circle.Color = Color3.fromRGB(0,255,0)
+Circle.Thickness = 2
+Circle.Filled = false
+
+-- Toggle Funktion
+Toggle.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    Circle.Visible = enabled
+    
+    if enabled then
+        Toggle.Text = "FOV: ON"
+    else
+        Toggle.Text = "FOV: OFF"
+    end
+end)
+
+-- Update Loop
+RunService.RenderStepped:Connect(function()
+    if not enabled then return end
+    
+    -- Kreis immer in Bildschirmmitte
+    Circle.Position = Vector2.new(
+        camera.ViewportSize.X/2,
+        camera.ViewportSize.Y/2
+    )
+    
+    -- Spieler im FOV markieren (nur visuell)
+    for _, other in pairs(Players:GetPlayers()) do
+        if other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
+            
+            local pos, onScreen = camera:WorldToViewportPoint(
+                other.Character.HumanoidRootPart.Position
+            )
+            
+            if onScreen then
+                local dist = (Vector2.new(pos.X,pos.Y) - Circle.Position).Magnitude
+                
+                if dist <= fovRadius then
+                    -- Optional: hier könntest du Highlight hinzufügen
+                end
+            end
+        end
+    end
+end)
