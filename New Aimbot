@@ -1,0 +1,97 @@
+Skeleton Debug
+
+if not game:GetService("RunService"):IsStudio() then
+    return
+end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local enabled = false
+local skeletons = {}
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+
+local Toggle = Instance.new("TextButton", ScreenGui)
+Toggle.Size = UDim2.new(0,140,0,40)
+Toggle.Position = UDim2.new(0,20,1,-60)
+Toggle.Text = "Skeleton: OFF"
+Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+Toggle.TextColor3 = Color3.new(1,1,1)
+
+Toggle.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    Toggle.Text = enabled and "Skeleton: ON" or "Skeleton: OFF"
+end)
+
+-- Verbindungspunkte (R15)
+local connections = {
+    {"Head","UpperTorso"},
+    {"UpperTorso","LowerTorso"},
+    {"UpperTorso","LeftUpperArm"},
+    {"LeftUpperArm","LeftLowerArm"},
+    {"LeftLowerArm","LeftHand"},
+    {"UpperTorso","RightUpperArm"},
+    {"RightUpperArm","RightLowerArm"},
+    {"RightLowerArm","RightHand"},
+    {"LowerTorso","LeftUpperLeg"},
+    {"LeftUpperLeg","LeftLowerLeg"},
+    {"LeftLowerLeg","LeftFoot"},
+    {"LowerTorso","RightUpperLeg"},
+    {"RightUpperLeg","RightLowerLeg"},
+    {"RightLowerLeg","RightFoot"},
+}
+
+local function createLine()
+    local line = Drawing.new("Line")
+    line.Color = Color3.fromRGB(0,255,0)
+    line.Thickness = 2
+    return line
+end
+
+RunService.RenderStepped:Connect(function()
+    if not enabled then
+        for _, lines in pairs(skeletons) do
+            for _, line in pairs(lines) do
+                line.Visible = false
+            end
+        end
+        return
+    end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            
+            if not skeletons[player] then
+                skeletons[player] = {}
+                for _ = 1, #connections do
+                    table.insert(skeletons[player], createLine())
+                end
+            end
+
+            for i, pair in ipairs(connections) do
+                local part1 = player.Character:FindFirstChild(pair[1])
+                local part2 = player.Character:FindFirstChild(pair[2])
+                local line = skeletons[player][i]
+
+                if part1 and part2 then
+                    local pos1, vis1 = Camera:WorldToViewportPoint(part1.Position)
+                    local pos2, vis2 = Camera:WorldToViewportPoint(part2.Position)
+
+                    if vis1 and vis2 then
+                        line.From = Vector2.new(pos1.X, pos1.Y)
+                        line.To = Vector2.new(pos2.X, pos2.Y)
+                        line.Visible = true
+                    else
+                        line.Visible = false
+                    end
+                else
+                    line.Visible = false
+                end
+            end
+        end
+    end
+end)
