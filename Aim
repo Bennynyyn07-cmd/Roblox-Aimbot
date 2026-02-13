@@ -1,0 +1,78 @@
+-- Developer ESP & FOV Display (Legal)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local fovRadius = 150
+local enabled = false
+
+-- GUI erstellen
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "DevESP_GUI"
+
+-- Toggle Button (Mobile / PC)
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0,120,0,40)
+ToggleBtn.Position = UDim2.new(0,20,1,-60)
+ToggleBtn.Text = "ESP: OFF"
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+ToggleBtn.TextColor3 = Color3.new(1,1,1)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    ToggleBtn.Text = enabled and "ESP: ON" or "ESP: OFF"
+end)
+
+-- FOV-Kreis (Screen Center)
+local Circle = Drawing.new("Circle")
+Circle.Visible = false
+Circle.Radius = fovRadius
+Circle.Color = Color3.fromRGB(0,255,0)
+Circle.Thickness = 2
+Circle.Filled = false
+
+-- ESP für Spieler
+local ESPs = {}
+
+RunService.RenderStepped:Connect(function()
+    -- Kreis aktualisieren
+    Circle.Visible = enabled
+    Circle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    
+    if not enabled then
+        for _, esp in pairs(ESPs) do
+            esp.Visible = false
+        end
+        return
+    end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            
+            local rootPos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            local distance = (Vector2.new(rootPos.X, rootPos.Y) - Circle.Position).Magnitude
+            
+            if distance <= fovRadius and onScreen then
+                -- Create ESP Box if not exists
+                if not ESPs[player] then
+                    local box = Drawing.new("Square")
+                    box.Color = Color3.fromRGB(255,0,0)
+                    box.Thickness = 2
+                    box.Filled = false
+                    ESPs[player] = box
+                end
+                
+                local box = ESPs[player]
+                box.Size = Vector2.new(40,40)
+                box.Position = Vector2.new(rootPos.X - 20, rootPos.Y - 20)
+                box.Visible = true
+            else
+                if ESPs[player] then
+                    ESPs[player].Visible = false
+                end
+            end
+        end
+    end
+end)
