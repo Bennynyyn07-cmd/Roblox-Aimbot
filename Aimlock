@@ -1,0 +1,79 @@
+-- Manual Face Target (One-Time Align)
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local maxDistance = 120
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+
+local Button = Instance.new("TextButton", ScreenGui)
+Button.Size = UDim2.new(0,140,0,40)
+Button.Position = UDim2.new(0,20,1,-60)
+Button.Text = "Face Target"
+Button.BackgroundColor3 = Color3.fromRGB(50,50,50)
+Button.TextColor3 = Color3.new(1,1,1)
+
+-- Ziel suchen (sichtbar + nächster)
+local function getClosestVisibleTarget()
+    local camera = workspace.CurrentCamera
+    local closest = nil
+    local shortest = maxDistance
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer
+        and player.Character
+        and player.Character:FindFirstChild("HumanoidRootPart")
+        and LocalPlayer.Character
+        and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+
+            local pos, onScreen = camera:WorldToViewportPoint(
+                player.Character.HumanoidRootPart.Position
+            )
+
+            if onScreen then
+                local distance = (
+                    LocalPlayer.Character.HumanoidRootPart.Position -
+                    player.Character.HumanoidRootPart.Position
+                ).Magnitude
+
+                if distance < shortest then
+                    shortest = distance
+                    closest = player.Character
+                end
+            end
+        end
+    end
+
+    return closest
+end
+
+-- Ausrichten Funktion
+local function faceTarget()
+    if not LocalPlayer.Character then return end
+    if not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    local target = getClosestVisibleTarget()
+    if not target then return end
+
+    local myRoot = LocalPlayer.Character.HumanoidRootPart
+    local targetPos = target.HumanoidRootPart.Position
+
+    myRoot.CFrame = CFrame.new(
+        myRoot.Position,
+        Vector3.new(targetPos.X, myRoot.Position.Y, targetPos.Z)
+    )
+end
+
+-- Button
+Button.MouseButton1Click:Connect(faceTarget)
+
+-- Taste Q
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.Q then
+        faceTarget()
+    end
+end)
