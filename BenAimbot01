@@ -1,0 +1,79 @@
+-- Manual Target System (Fair Lock-On)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local lockedTarget = nil
+local lockEnabled = false
+local maxDistance = 120
+
+-- GUI (Mobile Button)
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+
+local Toggle = Instance.new("TextButton", ScreenGui)
+Toggle.Size = UDim2.new(0,120,0,40)
+Toggle.Position = UDim2.new(0,20,1,-60)
+Toggle.Text = "Lock: OFF"
+Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+Toggle.TextColor3 = Color3.new(1,1,1)
+
+-- Ziel suchen (im Sichtfeld & Reichweite)
+local function getClosestVisibleTarget()
+    local closest = nil
+    local shortest = maxDistance
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            
+            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            
+            if onScreen then
+                local distance = (LocalPlayer.Character.HumanoidRootPart.Position -
+                                 player.Character.HumanoidRootPart.Position).Magnitude
+                
+                if distance < shortest then
+                    shortest = distance
+                    closest = player.Character
+                end
+            end
+        end
+    end
+
+    return closest
+end
+
+-- Toggle Funktion
+local function toggleLock()
+    lockEnabled = not lockEnabled
+    
+    if lockEnabled then
+        lockedTarget = getClosestVisibleTarget()
+        Toggle.Text = "Lock: ON"
+    else
+        lockedTarget = nil
+        Toggle.Text = "Lock: OFF"
+    end
+end
+
+Toggle.MouseButton1Click:Connect(toggleLock)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.Q then
+        toggleLock()
+    end
+end)
+
+-- Kamera Update
+RunService.RenderStepped:Connect(function()
+    if lockEnabled and lockedTarget and lockedTarget:FindFirstChild("HumanoidRootPart") then
+        
+        local targetPos = lockedTarget.HumanoidRootPart.Position
+        
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+    end
+end)
