@@ -1,0 +1,76 @@
+lua
+-- Configuration
+local aimbotEnabled = true -- Enable/Disable Aimbot
+local aimKey = "e"         -- Key to activate aimbot
+local aimSpeed = 0.1      -- Aiming speed (0.0 - 1.0)
+local aimRadius = 100      -- Maximum distance to consider targets (studs)
+local aimPart = "Head"     -- Body part to aim at (e.g., "Head", "HumanoidRootPart")
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Local Player
+local localPlayer = Players.LocalPlayer
+local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local camera = workspace.CurrentCamera
+
+-- Function to find the closest player
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local closestDistance = math.huge
+
+    for i, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local targetPart = player.Character:FindFirstChild(aimPart)
+            if targetPart then
+                local distance = (character.HumanoidRootPart.Position - targetPart.Position).Magnitude
+                if distance < closestDistance and distance <= aimRadius then
+                    closestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Function to smoothly aim at a target
+local function aimAtTarget(targetPosition)
+    local currentCameraCFrame = camera.CFrame
+    local desiredCFrame = CFrame.lookAt(currentCameraCFrame.Position, targetPosition)
+
+    -- Smoothly interpolate the camera's rotation
+    local newCFrame = currentCameraCFrame:Lerp(desiredCFrame, aimSpeed)
+
+    camera.CFrame = newCFrame
+end
+
+-- Main update loop
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled and UserInputService:IsKeyDown(Enum.KeyCode[string.upper(aimKey)]) then
+        local targetPlayer = getClosestPlayer()
+
+        if targetPlayer then
+            local targetPart = targetPlayer.Character:FindFirstChild(aimPart)
+            if targetPart then
+                aimAtTarget(targetPart.Position)
+            end
+        end
+    end
+end)
+
+-- Key press toggle (optional - removes the need to hold the key)
+--local aimbotToggled = false
+--UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+--    if not gameProcessedEvent then
+--        if input.KeyCode == Enum.KeyCode[string.upper(aimKey)] then
+--            aimbotToggled = not aimbotToggled
+--            aimbotEnabled = aimbotToggled
+--            print("Aimbot: " .. (aimbotEnabled and "Enabled" or "Disabled"))
+--        end
+--    end
+--end)
